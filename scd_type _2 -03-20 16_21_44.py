@@ -129,8 +129,6 @@ df_final = spark.read.format("delta").load(delta_table_path)
 df_final.show()
 
 
-# COMMAND ----------
-
 # MAGIC %md 
 # MAGIC # SCD_TYPE_2
 
