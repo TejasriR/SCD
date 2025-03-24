@@ -1,22 +1,20 @@
-# Databricks notebook source
+# SCD_1 in Databricks Notebook
 from delta.tables import DeltaTable
 from pyspark.sql.functions import *
 
-# COMMAND ----------
+# Create Data frame
 
 data = [(1,"John","HYD","IT"),(2,"Roshan","HYD","HR")]
 schema=["Id","Name","Location","Dept"]
 df=spark.createDataFrame(data,schema)
 df.display()
 
-# COMMAND ----------
+# Save as Delta table
 
 delta_table_path = "dbfs:/mnt/delta/employees"
 df.write.format("delta").mode("overwrite").save(delta_table_path)
 
-
-
-# COMMAND ----------
+# New data added into delta table 
 
 new_data =[(1, "John", "BLR", "IT"),  # Update Location
             (2, "Roshan", "HYD", "Finance"),  # Update Dept
@@ -24,12 +22,12 @@ new_data =[(1, "John", "BLR", "IT"),  # Update Location
 
 df_new = spark.createDataFrame(new_data, schema)
 
-# COMMAND ----------
+#  reads a Delta Lake table in Databricks/Spark and displays its data.
 
 deltatable= DeltaTable.forPath(spark , delta_table_path )
 deltatable.toDF().show()
 
-# COMMAND ----------
+# Delta Lake merge operation is used for upserting data (update existing records and insert new ones).
 
 deltatable.alias("target").merge(
 df_new.alias("source"),
@@ -42,14 +40,14 @@ df_new.alias("source"),
 
 deltatable.toDF().show()
 
-# COMMAND ----------
+# heading type
 
 # MAGIC %md
 # MAGIC ## # whenMatchedUpdateAll(condition) → Updates all columns but only when a change is detected.
 # MAGIC ## # whenMatchedUpdate(set={}) → Explicitly updates EndDate and IsCurrent when a match is found.
 # MAGIC ## # whenNotMatchedInsertAll() → Inserts new records into the Delta table.
 
-# COMMAND ----------
+# SDC_2
 
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType, BooleanType, DateType
@@ -99,21 +97,16 @@ data_new = [
     (3, "Alice", "PUNE", "FIN", "2024-03-15", None, True)  # New record
 ]
 
-# COMMAND ----------
-
 # Load the Delta Table
+
 delta_table = DeltaTable.forPath(spark, delta_table_path)
 delta_table.toDF().show()
-
-# COMMAND ----------
-
 
 df_new = spark.createDataFrame(data_new, schema=schema)
 df_new.show()
 
-# COMMAND ----------
+# Performing MERGE Operation for SCD Type 1 using Delta Lake
 
-# Perform MERGE operation (SCD Type 2)
 delta_table.alias("old").merge(
     df_new.alias("new"),
     "old.Id = new.Id"
@@ -130,21 +123,16 @@ delta_table.alias("old").merge(
 
 
 
-# COMMAND ----------
+# Reading the delta table
 
 df_final = spark.read.format("delta").load(delta_table_path)
 df_final.show()
-
-# COMMAND ----------
-
 
 
 # COMMAND ----------
 
 # MAGIC %md 
 # MAGIC # SCD_TYPE_2
-
-# COMMAND ----------
 
 import datetime
 from pyspark.sql import SparkSession
@@ -205,7 +193,10 @@ df_new = spark.createDataFrame(data_new, schema=schema)
 df_new = df_new.withColumn("EffectiveDate", col("EffectiveDate").cast(StringType()))
 df_new = df_new.withColumn("EndDate", col("EndDate").cast(StringType()))
 
-# Perform MERGE operation (SCD Type 2)
+
+# Perform MERGE operation (SCD Type 2) 
+
+
 delta_table.alias("old").merge(
     df_new.alias("new"),
     "old.Id = new.Id AND old.IsCurrent = True"
@@ -244,7 +235,7 @@ df_final = spark.read.format("delta").load(delta_table_path)
 df_final.show()
 
 
-# COMMAND ----------
+# Readingthe delta table 
 
 spark.read.format("delta").load(delta_table_path).printSchema()
 
